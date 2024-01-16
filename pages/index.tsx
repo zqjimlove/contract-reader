@@ -135,24 +135,32 @@ const Home: NextPage = () => {
       publicClient,
     })
 
+    const logObj = {
+      message: `${form.values.address} ${
+        isRead ? 'read' : 'write'
+      } [${
+        selectedMethod.name
+      }] with [${form.values.inputs.join(
+        ','
+      )}] got result:`,
+      result: '',
+    }
     try {
       let res: any
 
-      const logObj = {
-        message: `${form.values.address} ${
-          isRead ? 'read' : 'write'
-        } [${
-          selectedMethod.name
-        }] with [${form.values.inputs.join(
-          ','
-        )}] got result:`,
-        result: '',
-      }
       setLogs((p) => [logObj, ...p])
 
       if (isRead) {
         res = await contract.read[selectedMethod.name](
-          form.values.inputs
+          form.values.inputs.map((v: string) => {
+            if (
+              v.trim().startsWith('{') &&
+              v.trim().endsWith('}')
+            ) {
+              return JSON.parse(v)
+            }
+            return v
+          })
         )
       } else {
         res = await contract.write[selectedMethod.name](
@@ -166,14 +174,16 @@ const Home: NextPage = () => {
       }
 
       logObj.result = formatResult(res)
-
-      setLogs((p) => [...p])
     } catch (error: any) {
+      console.error(error)
       notifications.show({
         title: 'error',
         message: error.message,
         color: 'red',
       })
+      logObj.result = error.message
+    } finally {
+      setLogs((p) => [...p])
     }
   }
 
@@ -245,7 +255,11 @@ const Home: NextPage = () => {
                   <TextInput
                     key={item.name}
                     label={item.name}
-                    placeholder={item.type}
+                    placeholder={
+                      item.type === 'tuple'
+                        ? 'tuple(JSON)'
+                        : item.type
+                    }
                     {...form.getInputProps(
                       `inputs.${index}`
                     )}
