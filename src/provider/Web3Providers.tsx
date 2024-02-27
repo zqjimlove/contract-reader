@@ -49,8 +49,8 @@ export function Web3Providers({
               id: c.chainId,
               name: c.name,
               nativeCurrency: {
-                name: 'unknown',
-                symbol: 'unknown',
+                name: c.symbol,
+                symbol: c.symbol,
                 decimals: 18,
               },
               rpcUrls: {

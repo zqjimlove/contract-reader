@@ -27,6 +27,7 @@ const AddNetworkModal: React.FC<
     initialValues: {
       chainId,
       name: '',
+      symbol: '',
       rpc: '',
       explorer: '',
     },
@@ -39,6 +40,7 @@ const AddNetworkModal: React.FC<
       form.setValues({
         chainId,
         name: '',
+        symbol: '',
         rpc: '',
         explorer: '',
       })
@@ -69,6 +71,12 @@ const AddNetworkModal: React.FC<
           <Input
             placeholder="Entry name"
             {...form.getInputProps('name')}
+          />
+        </Input.Wrapper>
+        <Input.Wrapper label="Native Currency Symbol">
+          <Input
+            placeholder="Entry Symbol"
+            {...form.getInputProps('symbol')}
           />
         </Input.Wrapper>
         <Input.Wrapper label="Chain RPR URL">
