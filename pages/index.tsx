@@ -1,13 +1,10 @@
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 import type { NextPage } from 'next'
-import Head from 'next/head'
-import styles from '../styles/Home.module.css'
-import { find, uniq } from 'lodash'
+import { find } from 'lodash'
 import {
   AppShell,
   AppShellHeader,
   Button,
-  Input,
   JsonInput,
   Loader,
   Modal,
@@ -17,46 +14,43 @@ import {
 } from '@mantine/core'
 
 import {
-  erc20ABI,
-  erc721ABI,
-  readContracts,
+  useAccount,
+  useConfig,
   usePublicClient,
   useWalletClient,
 } from 'wagmi'
-console.log(
-  '💬️ ~ file: index.tsx:18 ~ erc20ABI:',
-  erc20ABI,
-  erc721ABI
-)
-import {
-  useDisclosure,
-  useInputState,
-} from '@mantine/hooks'
+
+import { useDisclosure } from '@mantine/hooks'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../src/libs/db'
 import { useForm } from '@mantine/form'
 import { notifications } from '@mantine/notifications'
+import { useEffect, useMemo, useState } from 'react'
 import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react'
-import {
-  Address,
+  erc20Abi,
+  erc721Abi,
   getAddress,
   getContract,
   isAddress,
 } from 'viem'
 import { formatResult } from '../src/utils/format'
+import AddNetworkModal, {
+  AddNetworkModalVisibleAtom,
+} from '../src/components/AddNetworkModal'
+import { useAtom } from 'jotai'
 
 const Home: NextPage = () => {
-  // const [address, setAddress] = useInputState('')
-  // const [abiType, setABIType] = useInputState('')
-  // const [selectedMethod, setSelectedMethod] =
-  //   useInputState('')
-
+  const [, setAddNetworkModalVisible] = useAtom(
+    AddNetworkModalVisibleAtom
+  )
   const walletClient = useWalletClient()
+
+  const { chainId, chain } = useAccount()
+  const { chains: wagmiChains } = useConfig()
+  const isCurrentChainSupported = wagmiChains.some(
+    (chain) => chain.id === chainId
+  )
+
   const publicClient = usePublicClient()
   const [logs, setLogs] = useState<any[]>([])
 
@@ -77,6 +71,7 @@ const Home: NextPage = () => {
   useEffect(() => {
     form.setFieldValue('method', '')
     form.setFieldValue('inputs', [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.values.abiType])
 
   const customABIs = useLiveQuery(async () => {
@@ -96,16 +91,16 @@ const Home: NextPage = () => {
   const abi: any[] = useMemo(() => {
     const { abiType } = form.values
     if (abiType === 'erc20ABI') {
-      return erc20ABI
+      return erc20Abi
     }
     if (abiType === 'erc721ABI') {
-      return erc721ABI
+      return erc721Abi
     }
 
     const json = find(customABIs, { name: abiType })?.json
 
     return JSON.parse(json || '[]')
-  }, [form.values.abiType])
+  }, [customABIs, form.values])
 
   const methods = useMemo(() => {
     return abi.filter((item) => item.type === 'function')
@@ -128,11 +123,14 @@ const Home: NextPage = () => {
     const isRead =
       selectedMethod?.stateMutability === 'view'
 
-    const contract = getContract({
+    const contract: any = getContract({
       address: getAddress(form.values.address),
       abi,
-      walletClient: walletClient.data,
-      publicClient,
+      client: {
+        wallet: walletClient.data,
+        public: publicClient,
+      },
+      // publicClient,
     })
 
     const logObj = {
@@ -195,7 +193,19 @@ const Home: NextPage = () => {
         breakpoint: 'sm',
       }}>
       <AppShellHeader>
-        <div className="flex justify-end h-14 items-center px-10">
+        <div className="flex justify-end h-14 items-center px-10 gap-2">
+          {!isCurrentChainSupported && walletClient.data && (
+            <Button
+              color="blue"
+              h={40}
+              radius={'12px'}
+              onClick={() =>
+                setAddNetworkModalVisible(true)
+              }
+              size="md">
+              Add Network
+            </Button>
+          )}
           <ConnectButton />
         </div>
       </AppShellHeader>
@@ -331,6 +341,7 @@ const Home: NextPage = () => {
           Save
         </Button>
       </Modal>
+      <AddNetworkModal />
     </AppShell>
   )
 }
