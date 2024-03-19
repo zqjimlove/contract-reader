@@ -4,6 +4,7 @@ import { find } from 'lodash'
 import {
   AppShell,
   AppShellHeader,
+  Burger,
   Button,
   JsonInput,
   Loader,
@@ -20,7 +21,10 @@ import {
   useWalletClient,
 } from 'wagmi'
 
-import { useDisclosure } from '@mantine/hooks'
+import {
+  useCallbackRef,
+  useDisclosure,
+} from '@mantine/hooks'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../src/libs/db'
 import { useForm } from '@mantine/form'
@@ -112,7 +116,7 @@ const Home: NextPage = () => {
     return m
   }, [form.values.method, methods])
 
-  const callContract = async () => {
+  const callContract = useCallbackRef(async () => {
     if (!walletClient.data) {
       notifications.show({
         message: 'wallet not connected',
@@ -183,7 +187,101 @@ const Home: NextPage = () => {
     } finally {
       setLogs((p) => [...p])
     }
-  }
+  })
+
+  const navContent = useMemo(
+    () => (
+      <ScrollArea>
+        <div className="flex flex-col gap-4">
+          <TextInput
+            label="合约地址"
+            placeholder="合约地址"
+            {...form.getInputProps('address')}
+          />
+          <Select
+            classNames={{
+              label: 'w-full',
+            }}
+            label={
+              <div className="flex justify-between w-full">
+                ABI Type
+                <Button
+                  onClick={addModalVisibleHandler.open}
+                  size="compact-xs"
+                  variant="subtle">
+                  Add
+                </Button>
+              </div>
+            }
+            placeholder="Pick value"
+            data={[
+              'erc20ABI',
+              'erc721ABI',
+              ...(customABIs?.map((v) => v.name) || []),
+            ]}
+            {...form.getInputProps('abiType')}
+          />
+          {!!methods.length && (
+            <Select
+              label={'Methods'}
+              placeholder="Pick value"
+              data={methods.map((m, index) => ({
+                value: String(index),
+                label: `${m.name}`,
+              }))}
+              {...form.getInputProps('method')}
+            />
+          )}
+          {selectedMethod?.stateMutability ===
+            'payable' && (
+            <TextInput
+              label={'Value'}
+              {...form.getInputProps(`value`)}
+            />
+          )}
+          {selectedMethod?.inputs.map(
+            (item: any, index: number) => {
+              return (
+                <TextInput
+                  key={item.name}
+                  label={item.name}
+                  placeholder={
+                    item.type === 'tuple'
+                      ? 'tuple(JSON)'
+                      : item.type
+                  }
+                  {...form.getInputProps(`inputs.${index}`)}
+                />
+              )
+            }
+          )}
+
+          {selectedMethod?.stateMutability ? (
+            selectedMethod?.stateMutability === 'view' ? (
+              <Button onClick={callContract} color="green">
+                Read
+              </Button>
+            ) : (
+              <Button onClick={callContract} color="red">
+                Write
+              </Button>
+            )
+          ) : null}
+        </div>
+      </ScrollArea>
+    ),
+    [
+      addModalVisibleHandler.open,
+      callContract,
+      customABIs,
+      form,
+      methods,
+      selectedMethod?.inputs,
+      selectedMethod?.stateMutability,
+    ]
+  )
+
+  const [opened, { toggle }] = useDisclosure(true)
 
   return (
     <AppShell
@@ -191,109 +289,37 @@ const Home: NextPage = () => {
       navbar={{
         width: 300,
         breakpoint: 'sm',
+        collapsed: { desktop: false, mobile: !opened },
       }}>
       <AppShellHeader>
-        <div className="flex justify-end h-14 items-center px-10 gap-2">
-          {!isCurrentChainSupported && walletClient.data && (
-            <Button
-              color="blue"
-              h={40}
-              radius={'12px'}
-              onClick={() =>
-                setAddNetworkModalVisible(true)
-              }
-              size="md">
-              Add Network
-            </Button>
-          )}
+        <div className="flex justify-end h-14 items-center px-2 md:px-10 gap-2">
+          <div className="mr-auto">
+            <Burger
+              opened={opened}
+              onClick={toggle}
+              hiddenFrom="sm"
+              size="sm"
+            />
+          </div>
+          {!isCurrentChainSupported &&
+            walletClient.data && (
+              <Button
+                color="blue"
+                h={40}
+                radius={'12px'}
+                onClick={() =>
+                  setAddNetworkModalVisible(true)
+                }
+                size="md">
+                Add Network
+              </Button>
+            )}
+
           <ConnectButton />
         </div>
       </AppShellHeader>
 
-      <AppShell.Navbar p="sm">
-        <ScrollArea>
-          <div className="flex flex-col gap-4">
-            <TextInput
-              label="合约地址"
-              placeholder="合约地址"
-              {...form.getInputProps('address')}
-            />
-            <Select
-              classNames={{
-                label: 'w-full',
-              }}
-              label={
-                <div className="flex justify-between w-full">
-                  ABI Type
-                  <Button
-                    onClick={addModalVisibleHandler.open}
-                    size="compact-xs"
-                    variant="subtle">
-                    Add
-                  </Button>
-                </div>
-              }
-              placeholder="Pick value"
-              data={[
-                'erc20ABI',
-                'erc721ABI',
-                ...(customABIs?.map((v) => v.name) || []),
-              ]}
-              {...form.getInputProps('abiType')}
-            />
-            {!!methods.length && (
-              <Select
-                label={'Methods'}
-                placeholder="Pick value"
-                data={methods.map((m, index) => ({
-                  value: String(index),
-                  label: `${m.name}`,
-                }))}
-                {...form.getInputProps('method')}
-              />
-            )}
-            {selectedMethod?.stateMutability ===
-              'payable' && (
-              <TextInput
-                label={'Value'}
-                {...form.getInputProps(`value`)}
-              />
-            )}
-            {selectedMethod?.inputs.map(
-              (item: any, index: number) => {
-                return (
-                  <TextInput
-                    key={item.name}
-                    label={item.name}
-                    placeholder={
-                      item.type === 'tuple'
-                        ? 'tuple(JSON)'
-                        : item.type
-                    }
-                    {...form.getInputProps(
-                      `inputs.${index}`
-                    )}
-                  />
-                )
-              }
-            )}
-
-            {selectedMethod?.stateMutability ? (
-              selectedMethod?.stateMutability === 'view' ? (
-                <Button
-                  onClick={callContract}
-                  color="green">
-                  Read
-                </Button>
-              ) : (
-                <Button onClick={callContract} color="red">
-                  Write
-                </Button>
-              )
-            ) : null}
-          </div>
-        </ScrollArea>
-      </AppShell.Navbar>
+      <AppShell.Navbar p="sm">{navContent}</AppShell.Navbar>
 
       <AppShell.Main>
         <div className="p-4">
