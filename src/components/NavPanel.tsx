@@ -282,6 +282,7 @@ const NavPanel: React.FC<NavPanelProps> = ({ setLogs }) => {
           autosize
           minRows={10}
           size="xl"
+          maxRows={12}
           {...addForm.getInputProps('json')}
         />
         <Button
