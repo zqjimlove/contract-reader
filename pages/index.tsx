@@ -92,7 +92,7 @@ const Home: NextPage = () => {
               </Button>
             )}
 
-          <ConnectButton showBalance chainStatus="icon" />
+          <ConnectButton showBalance chainStatus="name" />
         </div>
       </AppShellHeader>
 
@@ -103,7 +103,7 @@ const Home: NextPage = () => {
       <AppShell.Main>
         <div className="p-4">
           {logs.map((l, index) => (
-            <p key={index}>
+            <p className='break-all' key={index}>
               {l.message}
               {!l.result ? (
                 <Loader size="xs" />
