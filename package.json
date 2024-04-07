@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@binance/w3w-ethereum-provider": "^1.1.4",
+    "@binance/w3w-wagmi-connector-v2": "^1.1.4",
     "@mantine/core": "^7.4.0",
     "@mantine/form": "^7.4.0",
     "@mantine/hooks": "^7.4.0",
@@ -17,6 +19,7 @@
     "@tanstack/query-core": "^5.24.1",
     "@tanstack/react-query": "^5.22.2",
     "@types/lodash": "^4.14.202",
+    "ahooks": "^3.7.11",
     "dexie": "^3.2.4",
     "dexie-react-hooks": "^1.1.7",
     "jotai": "^2.6.5",
@@ -24,7 +27,7 @@
     "next": "^14.0.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "viem": "^2.7.12",
+    "viem": "^2.9.12",
     "wagmi": "^2.5.7"
   },
   "devDependencies": {

@@ -43,6 +43,7 @@ import AddNetworkModal, {
 } from '../src/components/AddNetworkModal'
 import { useAtom } from 'jotai'
 import NavPanel from '../src/components/NavPanel'
+// import { getProvider } from '@binance/w3w-ethereum-provider'
 
 const Home: NextPage = () => {
   const [, setAddNetworkModalVisible] = useAtom(
@@ -102,8 +103,17 @@ const Home: NextPage = () => {
 
       <AppShell.Main>
         <div className="p-4">
+          {/* <Button
+            onClick={async () => {
+              const a = await import('@binance/w3w-ethereum-provider')
+              const provider = a.getProvider({ chainId: 1 })
+              const accounts = await provider.enable()
+            }}>
+            Connect
+          </Button> */}
+
           {logs.map((l, index) => (
-            <p className='break-all' key={index}>
+            <p className="break-all" key={index}>
               {l.message}
               {!l.result ? (
                 <Loader size="xs" />

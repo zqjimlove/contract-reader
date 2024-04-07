@@ -15,6 +15,7 @@ import { _chains } from '@rainbow-me/rainbowkit/dist/config/getDefaultConfig'
 import * as allChainsMap from 'wagmi/chains'
 import { useCustomChains } from '../hooks/useCustomChains'
 import { defineChain } from 'viem'
+import { BinanceWallet } from './BinanceWallet'
 const { wallets } = getDefaultWallets()
 
 const allChains = Object.keys(allChainsMap).map(
@@ -42,6 +43,7 @@ export function Web3Providers({
       getDefaultConfig({
         appName: 'Contract render',
         projectId: '437f3645b09116c14205e13d206cb285',
+        wallets,
         chains: [
           ...allChains,
           ...customChains.map((c: any) =>

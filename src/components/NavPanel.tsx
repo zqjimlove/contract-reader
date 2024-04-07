@@ -1,6 +1,6 @@
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 import type { NextPage } from 'next'
-import { find } from 'lodash'
+import { find, set } from 'lodash'
 import {
   AppShell,
   AppShellHeader,
@@ -11,6 +11,11 @@ import {
   Modal,
   ScrollArea,
   Select,
+  Switch,
+  Tabs,
+  TabsList,
+  TabsPanel,
+  TabsTab,
   TextInput,
 } from '@mantine/core'
 
@@ -46,6 +51,7 @@ import {
 import { useAtom } from 'jotai'
 import { formatResult } from '../utils/format'
 import { db } from '../libs/db'
+import NavPanelTransfer from './NavPanelTransfer'
 
 interface NavPanelProps {
   setLogs: Dispatch<SetStateAction<any[]>>
@@ -189,84 +195,102 @@ const NavPanel: React.FC<NavPanelProps> = ({ setLogs }) => {
 
   return (
     <>
-      <ScrollArea>
-        <div className="flex flex-col gap-4">
-          <TextInput
-            label="合约地址"
-            placeholder="合约地址"
-            {...form.getInputProps('address')}
-          />
-          <Select
-            classNames={{
-              label: 'w-full',
-            }}
-            label={
-              <div className="flex justify-between w-full">
-                ABI Type
-                <Button
-                  onClick={addModalVisibleHandler.open}
-                  size="compact-xs"
-                  variant="subtle">
-                  Add
-                </Button>
-              </div>
-            }
-            placeholder="Pick value"
-            data={[
-              'erc20ABI',
-              'erc721ABI',
-              ...(customABIs?.map((v) => v.name) || []),
-            ]}
-            {...form.getInputProps('abiType')}
-          />
-          {!!methods.length && (
-            <Select
-              label={'Methods'}
-              placeholder="Pick value"
-              data={methods.map((m, index) => ({
-                value: String(index),
-                label: `${m.name}`,
-              }))}
-              {...form.getInputProps('method')}
-            />
-          )}
-          {selectedMethod?.stateMutability ===
-            'payable' && (
-            <TextInput
-              label={'Value'}
-              {...form.getInputProps(`value`)}
-            />
-          )}
-          {selectedMethod?.inputs.map(
-            (item: any, index: number) => {
-              return (
-                <TextInput
-                  key={item.name}
-                  label={item.name}
-                  placeholder={
-                    item.type === 'tuple'
-                      ? 'tuple(JSON)'
-                      : item.type
-                  }
-                  {...form.getInputProps(`inputs.${index}`)}
+      <Tabs defaultValue="sm">
+        <TabsList className="-mx-3 mb-4">
+          <TabsTab value="sm">Smart Contract</TabsTab>
+          <TabsTab value="t">Transfer</TabsTab>
+        </TabsList>
+        <TabsPanel value="t">
+          <NavPanelTransfer setLogs={setLogs} />
+        </TabsPanel>
+        <TabsPanel value="sm">
+          <ScrollArea>
+            <div className="flex flex-col gap-4">
+              <TextInput
+                label="合约地址"
+                placeholder="合约地址"
+                {...form.getInputProps('address')}
+              />
+              <Select
+                classNames={{
+                  label: 'w-full',
+                }}
+                label={
+                  <div className="flex justify-between w-full">
+                    ABI Type
+                    <Button
+                      onClick={addModalVisibleHandler.open}
+                      size="compact-xs"
+                      variant="subtle">
+                      Add
+                    </Button>
+                  </div>
+                }
+                placeholder="Pick value"
+                data={[
+                  'erc20ABI',
+                  'erc721ABI',
+                  ...(customABIs?.map((v) => v.name) || []),
+                ]}
+                {...form.getInputProps('abiType')}
+              />
+              {!!methods.length && (
+                <Select
+                  label={'Methods'}
+                  placeholder="Pick value"
+                  data={methods.map((m, index) => ({
+                    value: String(index),
+                    label: `${m.name}`,
+                  }))}
+                  {...form.getInputProps('method')}
                 />
-              )
-            }
-          )}
+              )}
+              {selectedMethod?.stateMutability ===
+                'payable' && (
+                <TextInput
+                  label={'Value'}
+                  {...form.getInputProps(`value`)}
+                />
+              )}
+              {selectedMethod?.inputs.map(
+                (item: any, index: number) => {
+                  return (
+                    <TextInput
+                      key={item.name}
+                      label={item.name}
+                      placeholder={
+                        item.type === 'tuple'
+                          ? 'tuple(JSON)'
+                          : item.type
+                      }
+                      {...form.getInputProps(
+                        `inputs.${index}`
+                      )}
+                    />
+                  )
+                }
+              )}
 
-          {selectedMethod?.stateMutability ? (
-            selectedMethod?.stateMutability === 'view' ? (
-              <Button onClick={callContract} color="green">
-                Read
-              </Button>
-            ) : (
-              <Button onClick={callContract} color="red">
-                Write
-              </Button>
-            )
-          ) : null}
-        </div>
-      </ScrollArea>
+              {selectedMethod?.stateMutability ? (
+                selectedMethod?.stateMutability ===
+                'view' ? (
+                  <Button
+                    onClick={callContract}
+                    color="green">
+                    Read
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={callContract}
+                    color="red">
+                    Write
+                  </Button>
+                )
+              ) : null}
+            </div>
+          </ScrollArea>
+        </TabsPanel>
+      </Tabs>
       <Modal
         size="lg"
         opened={addModalVisible}
