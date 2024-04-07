@@ -23,7 +23,7 @@ const Test: React.FC<TestProps> = () => {
       const getProvider = (
         await import('@binance/w3w-ethereum-provider')
       ).getProvider
-      const provider = getProvider({ chainId: 810180 })
+      const provider = getProvider({ chainId: 56 })
       setProvider(provider)
     }
 
