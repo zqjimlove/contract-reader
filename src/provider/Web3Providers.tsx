@@ -18,6 +18,10 @@ import { defineChain } from 'viem'
 import { BinanceWallet } from './BinanceWallet'
 const { wallets } = getDefaultWallets()
 
+if (typeof window !== 'undefined') {
+  wallets[0].wallets.push(BinanceWallet)
+}
+
 const allChains = Object.keys(allChainsMap).map(
   (key) => (allChainsMap as any)[key]
 ) as unknown as _chains
