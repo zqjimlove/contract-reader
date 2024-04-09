@@ -2,6 +2,7 @@ lockfileVersion: 5.4
 
 specifiers:
   '@binance/w3w-ethereum-provider': ^1.1.4
+  '@binance/w3w-utils': ^1.1.4
   '@binance/w3w-wagmi-connector-v2': ^1.1.4
   '@mantine/core': ^7.4.0
   '@mantine/form': ^7.4.0
@@ -32,6 +33,7 @@ specifiers:
 
 dependencies:
   '@binance/w3w-ethereum-provider': 1.1.4
+  '@binance/w3w-utils': 1.1.4
   '@binance/w3w-wagmi-connector-v2': 1.1.4_viem@2.9.12+wagmi@2.5.18
   '@mantine/core': 7.4.0_25p63pmbwafiiimo6ddtk4piie
   '@mantine/form': 7.7.1_react@18.2.0

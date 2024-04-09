@@ -1,16 +1,10 @@
-import {
-  Wallet,
-  getWalletConnectConnector,
-} from '@rainbow-me/rainbowkit'
-import {
-  binanceWallet,
-  getWagmiConnectorV2,
-} from '@binance/w3w-wagmi-connector-v2'
+import { Wallet } from '@rainbow-me/rainbowkit'
+
+import { binanceWallet } from '@binance/w3w-wagmi-connector-v2'
 import {
   ChainNotConfiguredError,
   Connector,
   createConnector,
-  CreateConnectorFn,
   normalizeChainId,
 } from 'wagmi'
 import { DefaultWalletOptions } from '@rainbow-me/rainbowkit/dist/wallets/Wallet'
@@ -22,6 +16,8 @@ import {
   UserRejectedRequestError,
 } from 'viem'
 import type BinanceProvider from '@binance/w3w-ethereum-provider'
+import { isInBinance } from '@binance/w3w-utils'
+import { getInjectedConnector } from './getInjectedConnector'
 
 type BinanceWalletOptions = DefaultWalletOptions & {
   parameters?: any
@@ -47,6 +43,8 @@ export const BinanceWallet = ({
   let providerPromise: any
   let uri: string
   let enablePromise: any
+
+  const shouldUseWalletConnect = !isInBinance()
 
   return {
     id: 'binance',
@@ -118,292 +116,321 @@ export const BinanceWallet = ({
         ],
       },
     },
-    createConnector: (walletDetails) => {
-      return createConnector((config) => {
-        return {
-          ...walletDetails,
-          id: 'BinanceW3WSDK',
-          name: 'Binance Web3 Wallet',
-          type: binanceWallet.type,
-          async setup() {
-            const provider: any = await this.getProvider()
-            if (!provider) return
-            provider.on(
-              'connect',
-              this.onConnect?.bind(this)
-            )
-          },
-          onDisplayUri(uri: string) {
-            console.log('💬️ ~ onDisplayUri ~ uri:', uri)
-
-            config.emitter.emit('message', {
-              type: 'display_uri',
-              data: uri,
-            })
-          },
-          async connect({ chainId } = {}) {
-            chainId = chainId ?? 56
-            const provider: any = await this.getProvider({
-              chainId,
-            })
-
-            // if (uri) {
-            //   setTimeout(() => {
-            //     provider.events.emit('display_uri', uri)
-            //     this.onDisplayUri(uri)
-            //   }, 200)
-            // }
-
-            provider.signClient.coreConnection.on(
-              'display_uri',
-              () => {
-                uri = provider.signClient.coreConnection.uri
-                provider.events.emit('display_uri', uri)
-                this.onDisplayUri(uri)
-              }
-            )
-
-            provider.on('uri_ready', this.onDisplayUri)
-            provider.on(
-              'accountsChanged',
-              this.onAccountsChanged.bind(this)
-            )
-            provider.on(
-              'chainChanged',
-              this.onChainChanged.bind(this)
-            )
-            provider.on(
-              'disconnect',
-              this.onDisconnect.bind(this)
-            )
-            setTimeout(
-              () =>
-                config.emitter.emit('message', {
-                  type: 'connecting',
-                }),
-              0
-            )
-
-            provider.setLng('en')
-
-            // if (
-            //   provider.signClient.coreConnection.pending
-            // ) {
-            //   provider.signClient.coreConnection._connected =
-            //     true
-            //   try {
-            //     provider.signClient.coreConnection.killSession()
-            //   } catch (error) {
-            //     console.error(error);
-            //   }
-            // }
-
-            // console.log(
-            //   '💬️ ~ connect ~ provider:',
-            //   provider
-            // )
-
-            if (
-              !provider.signClient.coreConnection.pending
-            ) {
-              enablePromise = provider.enable()
-            } else {
-              provider.events.emit('display_uri', uri)
-              this.onDisplayUri(uri)
-            }
-
-            const accounts = await enablePromise
-            const id: number = await this.getChainId()
-            return { accounts, chainId: id }
-          },
-          async disconnect() {
-            const provider: any = await this.getProvider()
-            provider.disconnect()
-
-            provider.removeListener(
-              'accountsChanged',
-              this.onAccountsChanged
-            )
-            provider.removeListener(
-              'chainChanged',
-              this.onChainChanged
-            )
-            provider.removeListener(
-              'disconnect',
-              this.onDisconnect
-            )
-          },
-          async getAccounts() {
-            const provider: any = await this.getProvider()
-            const accounts = (await provider.request({
-              method: 'eth_accounts',
-            })) as string[]
-            return accounts.map((x) => getAddress(x))
-          },
-          async getChainId() {
-            const provider: any = await this.getProvider()
-            const chainId =
-              provider.chainId ??
-              (await provider?.request({
-                method: 'eth_chainId',
-              }))
-            return normalizeChainId(chainId)
-          },
-          async getProvider({
-            chainId,
-          }: { chainId?: number } = {}) {
-            async function initProvider() {
-              const BinanceProvider = (
-                await import(
-                  '@binance/w3w-ethereum-provider'
+    createConnector: !shouldUseWalletConnect
+      ? getInjectedConnector({
+          namespace: 'ethereum',
+          flag: 'isMetamask',
+        })
+      : (walletDetails) => {
+          return createConnector((config) => {
+            return {
+              ...walletDetails,
+              id: 'BinanceW3WSDK',
+              name: 'Binance Web3 Wallet',
+              type: binanceWallet.type,
+              async setup() {
+                const provider: any =
+                  await this.getProvider()
+                if (!provider) return
+                provider.on(
+                  'connect',
+                  this.onConnect?.bind(this)
                 )
-              ).default
+              },
+              onDisplayUri(uri: string) {
+                console.log(
+                  '💬️ ~ onDisplayUri ~ uri:',
+                  uri
+                )
+                config.emitter.emit('message', {
+                  type: 'display_uri',
+                  data: uri,
+                })
+              },
+              async connect({ chainId } = {}) {
+                try {
+                  chainId = chainId ?? 56
+                  const provider: any =
+                    await this.getProvider({
+                      chainId,
+                    })
 
-              const targetChainId =
-                chainId || config.chains[0]?.id
-              const rpc = !parameters.infuraId
-                ? config.chains.reduce(
-                    (rpcProps, chain) => ({
-                      ...rpcProps,
-                      [chain.id]:
-                        chain.rpcUrls.default.http[0],
-                    }),
-                    {}
-                  )
-                : {}
-
-              const providerInstance = new BinanceProvider({
-                ...parameters,
-                chainId: targetChainId,
-                rpc: rpc,
-                showQrCodeModal: false,
-              })
-
-              return providerInstance
-            }
-
-            if (!provider_) {
-              if (!providerPromise)
-                providerPromise = initProvider()
-              provider_ = await providerPromise
-            }
-            return provider_
-          },
-          async isAuthorized() {
-            try {
-              const account = await this.getAccounts()
-              return !!account
-            } catch {
-              return false
-            }
-          },
-          async switchChain({ chainId }) {
-            const chain = config.chains.find(
-              (chain) => chain.id === chainId
-            )
-            if (!chain)
-              throw new SwitchChainError(
-                new ChainNotConfiguredError()
-              )
-
-            const provider: any = await this.getProvider()
-            const id = numberToHex(chain.id)
-
-            try {
-              await Promise.race([
-                provider.request({
-                  method: 'wallet_switchEthereumChain',
-                  params: [{ chainId: id }],
-                }),
-                new Promise((res) =>
-                  config.emitter.once(
-                    'change',
-                    ({ chainId: currentChainId }) => {
-                      if (currentChainId === chainId)
-                        res(chainId)
+                  provider.signClient.coreConnection?.on(
+                    'display_uri',
+                    () => {
+                      uri =
+                        provider.signClient.coreConnection
+                          .uri
+                      provider.events.emit(
+                        'display_uri',
+                        uri
+                      )
+                      this.onDisplayUri(uri)
                     }
                   )
-                ),
-              ])
-              return chain
-            } catch (error: any) {
-              const message =
-                typeof error === 'string'
-                  ? error
-                  : (error as ProviderRpcError)?.message
-              if (/user rejected request/i.test(message))
-                throw new UserRejectedRequestError(error)
-              throw new SwitchChainError(error)
-            }
-          },
-          onAccountsChanged(accounts: string[]) {
-            if (accounts.length === 0)
-              config.emitter.emit('disconnect')
-            else
-              config.emitter.emit('change', {
-                accounts: accounts.map((x) =>
-                  getAddress(x)
-                ),
-              })
-          },
-          onChainChanged(chain) {
-            const chainId = normalizeChainId(chain)
-            config.emitter.emit('change', { chainId })
-          },
-          async onConnect(connectInfo) {
-            const accounts = await this.getAccounts()
-            if (accounts.length === 0) return
+                  // if (uri) {
+                  //   setTimeout(() => {
+                  //     provider.events.emit('display_uri', uri)
+                  //     this.onDisplayUri(uri)
+                  //   }, 200)
+                  // }
 
-            const chainId = normalizeChainId(
-              connectInfo.chainId
-            )
-            config.emitter.emit('connect', {
-              accounts,
-              chainId,
-            })
+                  provider.on(
+                    'uri_ready',
+                    this.onDisplayUri
+                  )
+                  provider.on(
+                    'accountsChanged',
+                    this.onAccountsChanged.bind(this)
+                  )
+                  provider.on(
+                    'chainChanged',
+                    this.onChainChanged.bind(this)
+                  )
+                  provider.on(
+                    'disconnect',
+                    this.onDisconnect.bind(this)
+                  )
+                  setTimeout(
+                    () =>
+                      config.emitter.emit('message', {
+                        type: 'connecting',
+                      }),
+                    0
+                  )
 
-            const provider: any = await this.getProvider()
-            if (provider) {
-              provider.removeListener(
-                'connect',
-                this.onConnect?.bind(this)
-              )
-              provider.on(
-                'accountsChanged',
-                this.onAccountsChanged.bind(this)
-              )
-              provider.on(
-                'chainChanged',
-                this.onChainChanged
-              )
-              provider.on(
-                'disconnect',
-                this.onDisconnect.bind(this)
-              )
+                  provider.setLng('en')
+
+                  console.log(
+                    '💬️ ~ connect ~ provider.signClient.coreConnection:',
+                    provider.signClient.coreConnection
+                      .pending,
+                    enablePromise
+                  )
+
+                  if (
+                    !provider.signClient.coreConnection
+                      .pending
+                  ) {
+                    enablePromise = provider.enable()
+                  } else {
+                    provider.events.emit('display_uri', uri)
+                    this.onDisplayUri(uri)
+                  }
+
+                  const accounts = await enablePromise
+                  const id: number = await this.getChainId()
+                  return { accounts, chainId: id }
+                } catch (error) {
+                  console.error(error)
+                  throw error
+                }
+              },
+              async disconnect() {
+                const provider: any =
+                  await this.getProvider()
+                provider.disconnect()
+
+                provider.removeListener(
+                  'accountsChanged',
+                  this.onAccountsChanged
+                )
+                provider.removeListener(
+                  'chainChanged',
+                  this.onChainChanged
+                )
+                provider.removeListener(
+                  'disconnect',
+                  this.onDisconnect
+                )
+                enablePromise = null
+              },
+              async getAccounts() {
+                const provider: any =
+                  await this.getProvider()
+                const accounts = (await provider.request({
+                  method: 'eth_accounts',
+                })) as string[]
+                return accounts.map((x) => getAddress(x))
+              },
+              async getChainId() {
+                const provider: any =
+                  await this.getProvider()
+                const chainId =
+                  provider.chainId ??
+                  (await provider?.request({
+                    method: 'eth_chainId',
+                  }))
+                return normalizeChainId(chainId)
+              },
+              async getProvider({
+                chainId,
+              }: { chainId?: number } = {}) {
+                async function initProvider() {
+                  const BinanceProvider = (
+                    await import(
+                      '@binance/w3w-ethereum-provider'
+                    )
+                  ).default
+
+                  const targetChainId =
+                    chainId || config.chains[0]?.id
+                  const rpc = !parameters.infuraId
+                    ? config.chains.reduce(
+                        (rpcProps, chain) => ({
+                          ...rpcProps,
+                          [chain.id]:
+                            chain.rpcUrls.default.http[0],
+                        }),
+                        {}
+                      )
+                    : {}
+
+                  const providerInstance =
+                    new BinanceProvider({
+                      ...parameters,
+                      chainId: targetChainId,
+                      rpc: rpc,
+                      showQrCodeModal: false,
+                    })
+
+                  return providerInstance
+                }
+
+                if (
+                  !provider_ ||
+                  !(provider_ as any).signClient
+                    .coreConnection
+                ) {
+                  if (!providerPromise)
+                    providerPromise = initProvider()
+                  provider_ = await providerPromise
+                  providerPromise = null
+                }
+                return provider_
+              },
+              async isAuthorized() {
+                try {
+                  const account = await this.getAccounts()
+                  return !!account
+                } catch {
+                  return false
+                }
+              },
+              async switchChain({ chainId }) {
+                const chain = config.chains.find(
+                  (chain) => chain.id === chainId
+                )
+                if (!chain)
+                  throw new SwitchChainError(
+                    new ChainNotConfiguredError()
+                  )
+
+                const provider: any =
+                  await this.getProvider()
+                const id = numberToHex(chain.id)
+
+                try {
+                  await Promise.race([
+                    provider.request({
+                      method: 'wallet_switchEthereumChain',
+                      params: [{ chainId: id }],
+                    }),
+                    new Promise((res) =>
+                      config.emitter.once(
+                        'change',
+                        ({ chainId: currentChainId }) => {
+                          if (currentChainId === chainId)
+                            res(chainId)
+                        }
+                      )
+                    ),
+                  ])
+                  return chain
+                } catch (error: any) {
+                  const message =
+                    typeof error === 'string'
+                      ? error
+                      : (error as ProviderRpcError)?.message
+                  if (
+                    /user rejected request/i.test(message)
+                  )
+                    throw new UserRejectedRequestError(
+                      error
+                    )
+                  throw new SwitchChainError(error)
+                }
+              },
+              onAccountsChanged(accounts: string[]) {
+                if (accounts.length === 0)
+                  config.emitter.emit('disconnect')
+                else
+                  config.emitter.emit('change', {
+                    accounts: accounts.map((x) =>
+                      getAddress(x)
+                    ),
+                  })
+              },
+              onChainChanged(chain) {
+                const chainId = normalizeChainId(chain)
+                config.emitter.emit('change', { chainId })
+              },
+              async onConnect(connectInfo) {
+                const accounts = await this.getAccounts()
+                if (accounts.length === 0) return
+
+                const chainId = normalizeChainId(
+                  connectInfo.chainId
+                )
+                config.emitter.emit('connect', {
+                  accounts,
+                  chainId,
+                })
+
+                const provider: any =
+                  await this.getProvider()
+                if (provider) {
+                  provider.removeListener(
+                    'connect',
+                    this.onConnect?.bind(this)
+                  )
+                  provider.on(
+                    'accountsChanged',
+                    this.onAccountsChanged.bind(this)
+                  )
+                  provider.on(
+                    'chainChanged',
+                    this.onChainChanged
+                  )
+                  provider.on(
+                    'disconnect',
+                    this.onDisconnect.bind(this)
+                  )
+                }
+              },
+              async onDisconnect(error) {
+                config.emitter.emit('disconnect')
+                const provider: any =
+                  await this.getProvider()
+                provider.removeListener(
+                  'accountsChanged',
+                  this.onAccountsChanged.bind(this)
+                )
+                provider.removeListener(
+                  'chainChanged',
+                  this.onChainChanged
+                )
+                provider.removeListener(
+                  'disconnect',
+                  this.onDisconnect.bind(this)
+                )
+                provider.on(
+                  'connect',
+                  this.onConnect?.bind(this)
+                )
+              },
             }
-          },
-          async onDisconnect(error) {
-            config.emitter.emit('disconnect')
-            const provider: any = await this.getProvider()
-            provider.removeListener(
-              'accountsChanged',
-              this.onAccountsChanged.bind(this)
-            )
-            provider.removeListener(
-              'chainChanged',
-              this.onChainChanged
-            )
-            provider.removeListener(
-              'disconnect',
-              this.onDisconnect.bind(this)
-            )
-            provider.on(
-              'connect',
-              this.onConnect?.bind(this)
-            )
-          },
-        }
-      })
-    },
+          })
+        },
   }
 }
