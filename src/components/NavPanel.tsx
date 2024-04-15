@@ -29,6 +29,7 @@ import {
 import {
   useCallbackRef,
   useDisclosure,
+  useMediaQuery,
 } from '@mantine/hooks'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useForm } from '@mantine/form'
@@ -52,6 +53,8 @@ import { useAtom } from 'jotai'
 import { formatResult } from '../utils/format'
 import { db } from '../libs/db'
 import NavPanelTransfer from './NavPanelTransfer'
+import useSidebarDisclosure from '../hooks/useSidebarDisclosure'
+import { useIsSmallScreen } from '../hooks/useIsSmallScreen'
 
 interface NavPanelProps {
   setLogs: Dispatch<SetStateAction<any[]>>
@@ -120,6 +123,9 @@ const NavPanel: React.FC<NavPanelProps> = ({ setLogs }) => {
     return m
   }, [form.values.method, methods])
 
+  const isSmallScreen = useIsSmallScreen()
+  const [_, { setFalse: closeSidebar }] =
+    useSidebarDisclosure()
   const callContract = useCallbackRef(async () => {
     if (!walletClient.data) {
       notifications.show({
@@ -190,6 +196,9 @@ const NavPanel: React.FC<NavPanelProps> = ({ setLogs }) => {
       logObj.result = error.message
     } finally {
       setLogs((p) => [...p])
+      if (isSmallScreen) {
+        closeSidebar()
+      }
     }
   })
 

@@ -10,6 +10,8 @@ import React, {
 } from 'react'
 import { isAddress, parseEther } from 'viem'
 import { usePublicClient, useWalletClient } from 'wagmi'
+import { useIsSmallScreen } from '../hooks/useIsSmallScreen'
+import useSidebarDisclosure from '../hooks/useSidebarDisclosure'
 
 interface NavPanelTransferProps {
   setLogs: Dispatch<SetStateAction<any[]>>
@@ -33,6 +35,9 @@ const NavPanelTransfer: React.FC<NavPanelTransferProps> = ({
     },
   })
 
+  const isSmallScreen = useIsSmallScreen()
+  const [_, { setFalse: closeSidebar }] =
+    useSidebarDisclosure()
   const send = useCallbackRef(async () => {
     try {
       if (!isAddress(form.values.address)) {
@@ -64,6 +69,10 @@ const NavPanelTransfer: React.FC<NavPanelTransferProps> = ({
         },
         ...p,
       ])
+    } finally {
+      if (isSmallScreen) {
+        closeSidebar()
+      }
     }
   })
 

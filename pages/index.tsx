@@ -43,6 +43,8 @@ import AddNetworkModal, {
 } from '../src/components/AddNetworkModal'
 import { useAtom } from 'jotai'
 import NavPanel from '../src/components/NavPanel'
+import Head from 'next/head'
+import useSidebarDisclosure from '../src/hooks/useSidebarDisclosure'
 // import { getProvider } from '@binance/w3w-ethereum-provider'
 
 const Home: NextPage = () => {
@@ -59,76 +61,75 @@ const Home: NextPage = () => {
 
   const [logs, setLogs] = useState<any[]>([])
 
-  const [opened, { toggle }] = useDisclosure(true)
+  const [opened, { toggle }] = useSidebarDisclosure()
 
   return (
-    <AppShell
-      header={{ height: 56 }}
-      navbar={{
-        width: 300,
-        breakpoint: 'sm',
-        collapsed: { desktop: false, mobile: !opened },
-      }}>
-      <AppShellHeader>
-        <div className="flex justify-end h-14 items-center px-2 md:px-10 gap-2">
-          <div className="mr-auto">
-            <Burger
-              opened={opened}
-              onClick={toggle}
-              hiddenFrom="sm"
-              size="sm"
-            />
-          </div>
-          {!isCurrentChainSupported &&
-            walletClient.data && (
-              <Button
-                color="blue"
-                h={40}
-                radius={'12px'}
-                onClick={() =>
-                  setAddNetworkModalVisible(true)
-                }
-                size="md">
-                Add Network
-              </Button>
-            )}
-
-          <ConnectButton showBalance chainStatus="name" />
-        </div>
-      </AppShellHeader>
-
-      <AppShell.Navbar p="sm">
-        <NavPanel setLogs={setLogs} />
-      </AppShell.Navbar>
-
-      <AppShell.Main>
-        <div className="p-4">
-          {/* <Button
-            onClick={async () => {
-              const a = await import('@binance/w3w-ethereum-provider')
-              const provider = a.getProvider({ chainId: 1 })
-              const accounts = await provider.enable()
-            }}>
-            Connect
-          </Button> */}
-
-          {logs.map((l, index) => (
-            <p className="break-all" key={index}>
-              {l.message}
-              {!l.result ? (
-                <Loader size="xs" />
-              ) : (
-                <span className=" text-yellow-700">
-                  {l.result}
-                </span>
+    <>
+      <Head>
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+        />
+      </Head>
+      <AppShell
+        header={{ height: 56 }}
+        navbar={{
+          width: 300,
+          breakpoint: 'sm',
+          collapsed: { desktop: false, mobile: !opened },
+        }}>
+        <AppShellHeader>
+          <div className="flex justify-end h-14 items-center px-2 md:px-10 gap-2">
+            <div className="mr-auto">
+              <Burger
+                opened={opened}
+                onClick={toggle}
+                hiddenFrom="sm"
+                size="sm"
+              />
+            </div>
+            {!isCurrentChainSupported &&
+              walletClient.data && (
+                <Button
+                  color="blue"
+                  h={40}
+                  radius={'12px'}
+                  onClick={() =>
+                    setAddNetworkModalVisible(true)
+                  }
+                  size="md">
+                  Add Network
+                </Button>
               )}
-            </p>
-          ))}
-        </div>
-      </AppShell.Main>
 
-      <AddNetworkModal />
-    </AppShell>
+            <ConnectButton showBalance chainStatus="name" />
+          </div>
+        </AppShellHeader>
+
+        <AppShell.Navbar p="sm">
+          <NavPanel setLogs={setLogs} />
+        </AppShell.Navbar>
+
+        <AppShell.Main>
+          <div className="p-4">
+            {logs.map((l, index) => (
+              <p className="break-all" key={index}>
+                {l.message}
+                {!l.result ? (
+                  <Loader size="xs" />
+                ) : (
+                  <span className=" text-yellow-700">
+                    {l.result}
+                  </span>
+                )}
+              </p>
+            ))}
+          </div>
+        </AppShell.Main>
+
+        <AddNetworkModal />
+      </AppShell>
+    </>
   )
 }
 
